@@ -121,7 +121,6 @@ def plot_gaussian(size, sigma):
     Use the Gaussian_2D() function to create and plot the kernel as surfaces in 3D
     :param size:    Size of the Gaussian kernel
     :param sigma:   Sigma of the Gaussian kernel
-    :return:
     """
     z = Gaussian_2D(size, sigma)
     x = np.arange(-1 * (size - 1) / 2, ((size - 1) / 2) + 1, 1)
