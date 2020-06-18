@@ -1,0 +1,2 @@
+To obtain the result, please run __main__ in A2code.py to obtain the result shown in the report. If you wan to run the
+functions individually, please refer to the documentation in A2code. Note that the
