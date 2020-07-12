@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 import cv2 as cv
 from scipy import signal as sps
+from scipy import optimize as spo
 from matplotlib import pyplot as plt
 from Assignment3 import A2Q7 as q7
 from scipy.io import loadmat
@@ -104,7 +105,6 @@ def Q4(originalImage, rotatedImage, original_vectors, rotated_vectors, rotation_
             matched_vectors.append((v[:3], min_v[:3]))
 
     shape = orig_image.shape
-    print("Draw!")
     for m in matched_vectors:
         value = m
         src = value[1]
@@ -143,14 +143,119 @@ def Q8(img1, img2, feature_num, threshlod=0.5):
     cv.imwrite(img2[:-3] + 'sift_detect.jpg', orig_img2)
 
     bf = cv.BFMatcher()
-    matches = bf.knnMatch(descriptor1, descriptor2, k=2)
+    matches = bf.knnMatch(descriptor1, descriptor2, k=1)
     match_1 = []
-    for m, n in matches:
-        if m.distance < threshlod*n.distance:
-            match_1.append([m])
+    r_kps1 = []
+    r_kps2 = []
+    for m in matches:
+
+        r_kps1.append(kps1[m[0].queryIdx])
+        r_kps2.append(kps2[m[0].trainIdx])
+        match_1.append(m)
     output = cv.drawMatchesKnn(orig_img1, kps1, orig_img2, kps2, match_1, None,
                                flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     cv.imwrite("Q8_match.png", output)
+    return r_kps1, r_kps2
+
+def RNG(low, high, size):
+    r_list = np.empty(size, dtype=int)
+    r_list.fill(-1)
+    count = 0
+    while count < size:
+        a = int(np.random.randint(low, high))
+        while np.any(r_list == a):
+            a = int(np.random.randint(low, high))
+        r_list[count] = a
+        count += 1
+    return r_list
+
+def Homographic_matrix_generator():
+    matrix = np.zeros((9, 9))
+    matrix[:, 2] = [-1, 0, -1, 0, -1, 0, -1, 0, 0]
+    matrix[:, 5] = [0, -1, 0, -1, 0, -1, 0, -1, 0]
+    print(matrix)
+    return matrix
+
+def Homographic_matrix_filler(matrix, kps1, kps2):
+
+    x1, x2, x3, x4 = kps1[0, 0], kps1[0, 1], kps1[0, 2], kps1[0, 3]
+    y1, y2, y3, y4 = kps1[1, 0], kps1[1, 1], kps1[1, 2], kps1[1, 3]
+    xp1, xp2, xp3, xp4 = kps2[0, 0], kps2[0, 1], kps2[0, 2], kps2[0, 3]
+    yp1, yp2, yp3, yp4 = kps2[1, 0], kps2[1, 1], kps2[1, 2], kps2[1, 3]
+
+    matrix[:, 0] = [-x1, 0, -x2, 0, -x3, 0, -x4, 0, 0]
+    matrix[:, 1] = [-y1, 0, -y2, 0, -y3, 0, -y4, 0, 0]
+
+    matrix[:, 3] = [0, -x1, 0, -x2, 0, -x3, 0, -x4, 0]
+    matrix[:, 4] = [0, -y1, 0, -y2, 0, -y3, 0, -y4, 0]
+
+    matrix[:, 6] = [x1*xp1, x1*yp1, x2*xp2, x2*yp2, x3*xp3, x3*yp3, x4*xp4, x4*yp4, 0]
+    matrix[:, 7] = [y1 * xp1, y1 * yp1, y2 * xp2, y2 * yp2, y3 * xp3, y3 * yp3, y4 * xp4, y4 * yp4, 0]
+    matrix[:, 8] = [xp1, yp1, xp2, yp2, xp3, yp3, xp4, yp4, 1]
+    return matrix
+
+
+
+
+
+def Q9(img1, img2, kps1, kps2, threshold,limit=1000):
+    image1 = cv.imread(img1)
+    image2 = cv.imread(img2)
+    shape = image1.shape
+    kps1_len = len(kps1)
+    kps2_len = len(kps2)
+
+    kps1_coord = np.empty((2, kps1_len))
+    kps2_coord = np.empty((2, kps2_len))
+    for i in range(kps1_len):
+        kps1_coord[:, i] = kps1[i].pt
+
+
+    for i in range(kps2_len):
+        kps2_coord[:, i] = kps2[i].pt
+
+    best = 0
+    H = None
+    matched_point = []
+    kps1_len = kps1_coord.shape[1]
+    matrix = Homographic_matrix_generator()
+    b = np.zeros(9)
+    b[8] = 1
+    iteration = 0
+    while best < threshold and iteration < limit:
+        temp = []
+        random = RNG(0, kps1_len, 4)
+        m1 = kps1_coord[:, random]
+        m2 = kps2_coord[:, random]
+        A = Homographic_matrix_filler(matrix[:, :], m1, m2)
+        result = spo.lsq_linear(A, b).x.reshape((3, 3))
+        c_vector = np.ones(3)
+        count = 0
+        for i in range(kps1_len):
+            c_vector[:-1] = kps1_coord[:, i]
+            transformed = result @ c_vector
+            new_coord = transformed[:2] / transformed[-1]
+            if np.allclose(new_coord, kps2_coord[:, i], atol=1):
+                temp.append((kps1_coord[:, i], kps2_coord[:, i]))
+                count += 1
+        if count > best:
+            H = result[:, :]
+            best = count
+            matched_point = temp[:]
+        iteration += 1
+    print(best, len(matched_point))
+    output = np.empty((shape[0], 2*shape[1], shape[2]))
+    output[:, :shape[1], :] = image1
+    output[:, shape[1]:, :] = image2
+
+    for match in matched_point:
+        point1 = (int(match[0][0]), int(match[0][1]))
+        point2 = (int(match[1][0]) + shape[1], int(match[1][1]))
+        cv.line(output, point1, point2, (255, 0, 0))
+    cv.imwrite('Q9_match.png', output)
+    return H
+
+
 
 
 
@@ -172,5 +277,6 @@ if __name__ =="__main__":
     # feature_vector_change1 = Q2(Q1("UofT_1_rotated.png", 30, 5))
     # Q4("UofT_1_rotated.png", "UofT_rotated.png", feature_vector_change1, feature_vector_change2, ((512, 512), 90, 1), 5)
     # Q7()
-    Q8('./my_apartment/image_1.png', './my_apartment/image_2.png', 100)
+    kps1, kps2 = Q8('./my_apartment/image_1.png', './my_apartment/image_2.png', 100)
+    Q9('./my_apartment/image_1.png', './my_apartment/image_2.png', kps1, kps2, 20)
 

@@ -107,7 +107,7 @@ def Gaussian_pyramid(imgName):
     # Generate levels of the pyramid
     for i in range(0, 7):
         kernel = Gaussian_2D(5,2**i)
-        blur = sp.convolve2d(greyScale, kernel, mode='same')
+        blur = cv.GaussianBlur(greyScale, (5, 5), 2**i)
         resized_image = cv.resize(blur, (int(blur.shape[0]/(2**i)), int(blur.shape[1]/(2**i))))
         pyramids.append(resized_image)
 
@@ -230,16 +230,16 @@ def local_max(original_img, threshold):
 
 
 if __name__ =="__main__":
-    Q1_plot()
-    Resize_to_half_and_tenth('shapes.png')
-    Resize_to_half_and_tenth('cnTower.jpg')
-    Harris_Corner_Detector('shapes.png', 5, 99, smooth_image=False)
-    Harris_Corner_Detector('shapes.png', 5, 99, smooth_image=True)
-    Harris_Corner_Detector('shapes_half.png', 5, 99, smooth_image=True)
-    Harris_Corner_Detector('shapes_1_tenth.png', 5, 99, smooth_image=True)
-    Harris_Corner_Detector('cnTower.jpg', 5, 99, smooth_image=True)
-    Harris_Corner_Detector('cnTower_half.png', 5, 99, smooth_image=True)
-    Harris_Corner_Detector('cnTower_1_tenth.png', 5, 99, smooth_image=True)
-    Gaussian_pyramid('sunflower.jpg')
-    Laplacian_pyramid('sunflower.jpg')
+    # Q1_plot()
+    # Resize_to_half_and_tenth('shapes.png')
+    # Resize_to_half_and_tenth('cnTower.jpg')
+    # Harris_Corner_Detector('shapes.png', 5, 99, smooth_image=False)
+    # Harris_Corner_Detector('shapes.png', 5, 99, smooth_image=True)
+    # Harris_Corner_Detector('shapes_half.png', 5, 99, smooth_image=True)
+    # Harris_Corner_Detector('shapes_1_tenth.png', 5, 99, smooth_image=True)
+    # Harris_Corner_Detector('cnTower.jpg', 5, 99, smooth_image=True)
+    # Harris_Corner_Detector('cnTower_half.png', 5, 99, smooth_image=True)
+    # Harris_Corner_Detector('cnTower_1_tenth.png', 5, 99, smooth_image=True)
+    # Gaussian_pyramid('sunflower.jpg')
+    # Laplacian_pyramid('sunflower.jpg')
     local_max("sunflower.jpg", 1)
