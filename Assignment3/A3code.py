@@ -126,7 +126,7 @@ def Q7():
     # print(len(features_1[:, 0]))
     # print(theta)
 
-def Q8(img1, img2, feature_num, threshlod=0.5):
+def Q8(img1, img2, feature_num):
     orig_img1 = cv.imread(img1)
     greyScale1 = cv.cvtColor(orig_img1, cv.COLOR_RGB2GRAY)
     orig_img2 = cv.imread(img2)
@@ -195,9 +195,6 @@ def Homographic_matrix_filler(matrix, kps1, kps2):
     return matrix
 
 
-
-
-
 def Q9(img1, img2, kps1, kps2, threshold,limit=1000):
     image1 = cv.imread(img1)
     image2 = cv.imread(img2)
@@ -255,12 +252,46 @@ def Q9(img1, img2, kps1, kps2, threshold,limit=1000):
     cv.imwrite('Q9_match.png', output)
     return H
 
+def Q10(img_list):
+    output = cv.imread(len(img_list)//2)
 
+    for i in range((len(img_list)//2) + 1, len(img_list)):
 
+        kps1, kps2 = Q8(img_list[i + 1], output, 100)
+        H = Q9(img_list[i + 1], output, kps1, kps2, 20)
+        img2 = cv.imread(img_list[i])
+        furthest_point = H @ np.array([[img2.shape[1] - 1], [img2.shape[0] - 1], [1]])
+        furthest_x = int(furthest_point[0]/furthest_point[-1])
+        temp = np.zeros((output.shape[0], furthest_x))
+        temp[:, output.shape[0]] = output
+        for y in img2.shape[0]:
+            for x in img2.shape[1]:
+                transformed_point = H @ np.array([[x],[y],[1]])
+                coord = transformed_point[:2]/transformed_point[-1]
+                temp[int(coord[1]), int(coord[0])] = img2[y, x]
+        output = temp
 
+    for j in range(len(img_list)//2 - 1, 0, -1):
 
+        kps1, kps2 = Q8(output, img_list[j], 100)
+        H = Q9(output, img_list[j], kps1, kps2, 20)
+        img2 = cv.imread(img_list[j])
+        coord = []
+        for y in range(len(img2.shape[0])):
+            first_point = H @ np.array([[img2.shape[1] - 1], [img2.shape[0] - 1], [1]])
+            first_point = first_point[1]/first_point[-1]
+            coord.append(int(first_point))
+        min_point = min(coord)
+        temp = np.zeros((output.shape[0], output.shape[0] + abs(min_point)))
+        temp[:, abs(min_point):] = output
 
-
+        for y in img2.shape[0]:
+            for x in img2.shape[1]:
+                transformed_point = H @ np.array([[x],[y],[1]])
+                coord = transformed_point[:2]/transformed_point[-1]
+                temp[int(coord[1]), int(coord[0])] = img2[y, x]
+        output = temp
+    
 
 
 
