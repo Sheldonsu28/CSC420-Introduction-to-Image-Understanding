@@ -1,0 +1,2 @@
+To run my code, please run the __main__  in A3code.py. If some of the plots are tangled together, please comment out any
+other function calls from other questions before it and run each question individually from:

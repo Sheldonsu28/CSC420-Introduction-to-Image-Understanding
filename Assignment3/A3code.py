@@ -1,11 +1,11 @@
 import numpy as np
-import scipy as sp
 import cv2 as cv
-from scipy import signal as sps
 from scipy import optimize as spo
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from Assignment3 import A2Q7 as q7
-from scipy.io import loadmat
+
 
 
 # Code for Q1
@@ -38,17 +38,40 @@ def Q1(imgName, threshlod, kernel=3):
             return_value.append([orientations, weighted_magnitude, v])
             selected_vectors.append(v)
 
-    # x_coord = (selected_vectors[0][0] - 8, selected_vectors[0][0] + 8)
-    # y_coord = (selected_vectors[0][1] - 8, selected_vectors[0][1] + 8)
-    #
-    # X, Y = np.meshgrid(np.arange(-8, 8), np.arange(-8, 8))
-    # U = Gaussain_gradient_x[selected_vectors[0][-1]][x_coord[0]:x_coord[1], y_coord[0]:y_coord[1]]
-    # V = Gaussain_gradient_y[selected_vectors[0][-1]][x_coord[0]:x_coord[1], y_coord[0]:y_coord[1]]
+    x_coord = (selected_vectors[0][0] - 8, selected_vectors[0][0] + 8)
+    y_coord = (selected_vectors[0][1] - 8, selected_vectors[0][1] + 8)
 
-    # plt.quiver(X, Y, U, V, pivot='mid')
-    # plt.title("Image gradient orientation")
-    # plt.legend()
-    # plt.savefig(imgName[0:-4] + "_orientation.png")
+    X, Y = np.meshgrid(np.arange(-8, 8), np.arange(-8, 8))
+    U = Gaussain_gradient_x[selected_vectors[0][-1]][x_coord[0]:x_coord[1], y_coord[0]:y_coord[1]]
+    V = Gaussain_gradient_y[selected_vectors[0][-1]][x_coord[0]:x_coord[1], y_coord[0]:y_coord[1]]
+    w_magnitude = magnitude[selected_vectors[0][-1]][x_coord[0]:x_coord[1], y_coord[0]:y_coord[1]]*kernel
+    print(x_coord, y_coord)
+
+
+    plt.quiver(X, Y, U, V, pivot='mid')
+    plt.title("Image gradient orientation")
+    plt.legend()
+    plt.savefig(imgName[0:-4] + "_orientation.png")
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.plot_surface(X, Y, w_magnitude, rstride=1, cstride=1, cmap='viridis', edgecolor='none')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    plt.title('Weighted gradient magnitude')
+    plt.savefig('Q1_w_magnitude.png')
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.plot_surface(X, Y, magnitude[selected_vectors[0][-1]][x_coord[0]:x_coord[1], y_coord[0]:y_coord[1]],
+                    rstride=1, cstride=1, cmap='viridis', edgecolor='none')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    plt.title('Gradient magnitude')
+    plt.savefig('Q1_magnitude.png')
+
     return return_value, position_vectors
 
 
@@ -67,9 +90,13 @@ def Q2(data):
         for i in range(0, 36):
             location_vector.append(counts[int((peak_index + i) % 36)])
         return_list.append(np.array(location_vector))
-        # if v is values[0]:
-        #     plt.hist(flatten_orientation, bins=np.arange(0, 361, 10))
-        #     plt.show()
+        if v is values[0]:
+            fig = plt.figure()
+            plt.hist(flatten_orientation, bins=np.arange(0, 361, 10))
+            plt.title("Histogram of key point (17, 344)")
+            plt.xlabel("Degree")
+            plt.ylabel("Number of gradient in the current bin")
+            plt.savefig("Q2_histogram")
     return return_list
 
 
@@ -120,17 +147,14 @@ def Q4(originalImage, rotatedImage, original_vectors, rotated_vectors, rotation_
     cv.imwrite(rotatedImage[0:-4] + "_match.png", output)
 
 
-def Q7():
-    sift_features = loadmat('sift_features.mat')
-    print(sift_features.keys())
-    features_1 = sift_features["features_1"]
-    keypoints_1 = sift_features["keypoints_1"]
-    features_2 = sift_features["features_2"]
-    keypoints_2 = sift_features["keypoints_2"]
-    theta = sift_features["theta"]
-    print(keypoints_1[:, 0])
-    # print(len(features_1[:, 0]))
-    # print(theta)
+def Q7(img_name, feature_num):
+    img = cv.imread(img_name)
+    sift = cv.xfeatures2d.SIFT_create(nfeatures=feature_num)
+    kps1, descriptor1 = sift.detectAndCompute(img, None)
+    q7.local_max(img_name, 50)
+    img_1 = cv.drawKeypoints(img, kps1, None)
+    cv.imwrite("Q7.png", img_1)
+
 
 
 def Q8(img1, img2, feature_num, write=False):
@@ -155,7 +179,7 @@ def Q8(img1, img2, feature_num, write=False):
     r_kps1 = []
     r_kps2 = []
     for m, n in matches:
-        if m.distance < 0.6 * n.distance:
+        if m.distance < 0.75 * n.distance:
             r_kps1.append(kps1[m.queryIdx])
             r_kps2.append(kps2[m.trainIdx])
             match_1.append([m])
@@ -266,7 +290,7 @@ def Q9(img1, img2, kps1, kps2, threshold, limit=1000, write=False):
 def Q10(img1, img2, inv=False):
 
     kps1, kps2 = Q8(img2, img1, 3000)
-    H = Q9(img1, img2, kps1, kps2, 900)
+    H = Q9(img1, img2, kps1, kps2, 1000)
     img1 = cv.imread(img1) if isinstance(img1, str) else img1
     img2 = cv.imread(img2) if isinstance(img2, str) else img2
 
@@ -323,19 +347,22 @@ def Q10(img1, img2, inv=False):
 
 
 if __name__ == "__main__":
-    # # Q1Values = Q1("UofT.jpg", 30, 5)
-    # # print(len(Q1Values[0]))
-    # # feature_vector_original = Q2(Q1Values)
-    # Q3("UofT.jpg", 512, 512, 90, 2)
-    # Q3("UofT_1.jpg", 512, 512, 0, 2)
-    # change1 = Q1("UofT_rotated.png", 30, 5)
-    # feature_vector_change2 = Q2(change1)
-    # print(len(change1[0]))
-    # feature_vector_change1 = Q2(Q1("UofT_1_rotated.png", 30, 5))
-    # Q4("UofT_1_rotated.png", "UofT_rotated.png", feature_vector_change1, feature_vector_change2, ((512, 512), 90, 1), 5)
-    # Q7()
-    # kps1, kps2 = Q8('./my_apartment/image_1.png', './my_apartment/image_2.png', 100)
-    # Q9('./my_apartment/image_1.png', './my_apartment/image_2.png', kps1, kps2, 20)
+    Q1Values = Q1("UofT.jpg", 30, 5)
+    feature_vector_original = Q2(Q1Values)
+    Q3("UofT.jpg", 512, 512, 73, 2)
+    Q3("UofT_1.jpg", 512, 512, 270, 1)
+    change1 = Q1("UofT.jpg", 30, 5)
+    feature_vector0 = Q2(change1)
+    feature_vector1 = Q2(Q1("UofT_rotated.png", 30, 5))
+    Q4("UofT.jpg", "UofT_rotated.png", feature_vector0, feature_vector1, ((512, 512), 73, 2), 5)
+
+    change1 = Q1("UofT.jpg", 50, 5)
+    feature_vector0 = Q2(change1)
+    feature_vector1 = Q2(Q1("UofT_1_rotated.png", 50, 5))
+    Q4("UofT.jpg", "UofT_1_rotated.png", feature_vector0, feature_vector1, ((512, 512), 270, 1), 5)
+    Q7("UofT.jpg", 600)
+    kps1, kps2 = Q8('./my_apartment/image_1.png', './my_apartment/image_2.png', 400,write=True)
+    Q9('./my_apartment/image_1.png', './my_apartment/image_2.png', kps1, kps2, 50)
     img_list = ['./my_apartment/image_1.png', './my_apartment/image_2.png', './my_apartment/image_3.png',
                 './my_apartment/image_4.png', './my_apartment/image_5.png', './my_apartment/image_6.png',
                 './my_apartment/image_7.png', './my_apartment/image_8.png', './my_apartment/image_9.png',
@@ -356,3 +383,14 @@ if __name__ == "__main__":
     result_43210 = Q10(result_432, result_210, inv=True)
     final_result = Q10(result_43210, result_56789)
     cv.imwrite("Q10_final.png", final_result)
+
+    img_list_1 = ['./TestImages/1.jpg', './TestImages/2.jpg', './TestImages/3.jpg', './TestImages/4.jpg',
+                './TestImages/5.jpg']
+    result_10 = Q10(img_list_1[1], img_list_1[0], inv=True)
+    result_21 = Q10(img_list_1[2], img_list_1[1], inv=True)
+    result_210 = Q10(result_21, result_10, inv=True)
+    result_23 = Q10(img_list_1[2], img_list_1[3])
+    result_34 = Q10(img_list_1[3], img_list_1[4])
+    result_234 = Q10(result_23, result_34)
+    final = Q10(result_210, result_234)
+    cv.imwrite("My_test_set.png", final)
