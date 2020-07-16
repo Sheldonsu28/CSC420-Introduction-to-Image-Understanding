@@ -155,7 +155,7 @@ def Q8(img1, img2, feature_num, write=False):
     r_kps1 = []
     r_kps2 = []
     for m, n in matches:
-        if m.distance < 0.75 * n.distance:
+        if m.distance < 0.6 * n.distance:
             r_kps1.append(kps1[m.queryIdx])
             r_kps2.append(kps2[m.trainIdx])
             match_1.append([m])
@@ -180,9 +180,9 @@ def RNG(low, high, size):
 
 
 def Homographic_matrix_generator():
-    matrix = np.zeros((8, 9))
-    matrix[:, 2] = [1, 0, 1, 0, 1, 0, 1, 0]
-    matrix[:, 5] = [0, 1, 0, 1, 0, 1, 0, 1]
+    matrix = np.zeros((9, 9))
+    matrix[:, 2] = [-1, 0, -1, 0, -1, 0, -1, 0, 0]
+    matrix[:, 5] = [0, -1, 0, -1, 0, -1, 0, -1, 0]
     return matrix
 
 
@@ -192,15 +192,15 @@ def Homographic_matrix_filler(matrix, kps1, kps2):
     xp1, xp2, xp3, xp4 = kps2[0, 0], kps2[0, 1], kps2[0, 2], kps2[0, 3]
     yp1, yp2, yp3, yp4 = kps2[1, 0], kps2[1, 1], kps2[1, 2], kps2[1, 3]
 
-    matrix[:, 0] = [x1, 0, x2, 0, x3, 0, x4, 0]
-    matrix[:, 1] = [y1, 0, y2, 0, y3, 0, y4, 0]
+    matrix[:, 0] = [-x1, 0, -x2, 0, -x3, 0, -x4, 0, 0]
+    matrix[:, 1] = [-y1, 0, -y2, 0, -y3, 0, -y4, 0, 0]
 
-    matrix[:, 3] = [0, x1, 0, x2, 0, x3, 0, x4]
-    matrix[:, 4] = [0, y1, 0, y2, 0, y3, 0, y4]
+    matrix[:, 3] = [0, -x1, 0, -x2, 0, -x3, 0, -x4, 0]
+    matrix[:, 4] = [0, -y1, 0, -y2, 0, -y3, 0, -y4, 0]
 
-    matrix[:, 6] = [x1 * -xp1, x1 * -yp1, x2 * -xp2, x2 * -yp2, x3 * -xp3, x3 * -yp3, x4 * -xp4, x4 * -yp4]
-    matrix[:, 7] = [y1 * -xp1, y1 * -yp1, y2 * -xp2, y2 * -yp2, y3 * -xp3, y3 * -yp3, y4 * -xp4, y4 * -yp4]
-    matrix[:, 8] = [-xp1, -yp1, -xp2, -yp2, -xp3, -yp3, -xp4, -yp4]
+    matrix[:, 6] = [x1 * xp1, x1 * yp1, x2 * xp2, x2 * yp2, x3 * xp3, x3 * yp3, x4 * xp4, x4 * yp4, 0]
+    matrix[:, 7] = [y1 * xp1, y1 * yp1, y2 * xp2, y2 * yp2, y3 * xp3, y3 * yp3, y4 * xp4, y4 * yp4, 0]
+    matrix[:, 8] = [xp1, yp1, xp2, yp2, xp3, yp3, xp4, yp4, 1]
     return matrix
 
 
@@ -225,14 +225,15 @@ def Q9(img1, img2, kps1, kps2, threshold, limit=1000, write=False):
     kps1_len = kps1_coord.shape[1]
     matrix = Homographic_matrix_generator()
     iteration = 0
+    b = np.zeros(9)
+    b[-1] = 1
     while best < threshold and iteration < limit:
         temp = []
         random = RNG(0, kps1_len, 4)
         m1 = kps1_coord[:, random]
         m2 = kps2_coord[:, random]
         A = Homographic_matrix_filler(matrix[:, :], m1, m2)
-        result = np.reshape(np.linalg.svd(A)[2][8], (3, 3))
-        result /= result[2, 2]
+        result = spo.lsq_linear(A, b).x.reshape((3,3))
         c_vector = np.ones(3)
         count = 0
         for i in range(kps1_len):
@@ -262,13 +263,14 @@ def Q9(img1, img2, kps1, kps2, threshold, limit=1000, write=False):
     return H
 
 
-def Q10(img1, img2):
+def Q10(img1, img2, inv=False):
 
-    kps1, kps2 = Q8(img2, img1, 1000)
-    H = Q9(img1, img2, kps1, kps2, 500)
+    kps1, kps2 = Q8(img2, img1, 3000)
+    H = Q9(img1, img2, kps1, kps2, 900)
     img1 = cv.imread(img1) if isinstance(img1, str) else img1
     img2 = cv.imread(img2) if isinstance(img2, str) else img2
 
+    T_matrix = np.array([[1,0,0],[0,1,0],[0,0,1]])
     max_value = []
     for y in range(img2.shape[0]):
         last_point = H @ np.array([[img2.shape[1] - 1], [y], [1]])
@@ -279,10 +281,44 @@ def Q10(img1, img2):
         max_value.append(int(first_point1))
 
     max_transform = max(max_value) + 1
+    min_transform = min(max_value) + 1
     furthest_x = max_transform if max_transform > img1.shape[1] else img1.shape[1]
-    print(furthest_x)
-    result = cv.warpPerspective(img2, H, (img1.shape[1] + img2.shape[1], img1.shape[0]))
-    result[:img1.shape[0], :img1.shape[1]] = img1
+    closest_x = min_transform if min_transform < 0 else 0
+    T_matrix[0, 2] = abs(closest_x)
+    if inv:
+        result = cv.warpPerspective(img2, H @ T_matrix, (img1.shape[1] + abs(closest_x), img1.shape[0]))
+
+        bound = int(0.01 * img1.shape[1])
+
+        blend2 = np.where(result[:, abs(closest_x):abs(closest_x)+bound, :] < 0.1 * img1[:, :bound, :], img1[:, :bound, :],
+                          result[:, abs(closest_x):abs(closest_x)+bound, :])
+        result[:, abs(closest_x):abs(closest_x) + bound, :] = blend2
+
+        blend1 = np.where(img1[:, :bound, :] < 0.1 * result[:, abs(closest_x):abs(closest_x) + bound, :],
+                          result[:, abs(closest_x):abs(closest_x) + bound, :],
+                          img1[:, :bound, :])
+        img1[:, :bound] = blend1
+
+        result[:img1.shape[0], abs(closest_x):] = img1
+
+    else:
+        result = cv.warpPerspective(img2, H, (furthest_x, img1.shape[0]))
+        bound = int(0.95*img1.shape[1])
+        max_v = img1.shape[1]
+
+        blend2 = np.where(result[:, bound:max_v, :] < 0.1 * img1[:, bound:, :], img1[:, bound:, :],
+                          result[:, bound:max_v, :])
+        result[:, bound:max_v, :] = blend2
+
+        blend1 = np.where(img1[:, bound:, :] < 0.1 * result[:, bound:max_v, :], result[:, bound:max_v, :],
+                          img1[:, bound:, :])
+        img1[:, bound:] = blend1
+        result[:img1.shape[0], :img1.shape[1]] = img1
+
+    while np.sum(result[:, 0, :]) < 10*255:
+        result = result[:, 1:]
+    while np.sum(result[:, -1, :]) < 10*255:
+        result = result[:, :-1, :]
     return result
 
 
@@ -305,11 +341,18 @@ if __name__ == "__main__":
                 './my_apartment/image_7.png', './my_apartment/image_8.png', './my_apartment/image_9.png',
                 './my_apartment/image_10.png']
     result_56 = Q10(img_list[5], img_list[6])
-    result_78 = Q10(img_list[7], img_list[8])
-    result_789 = Q10(result_78, img_list[9])
-    result_56789 = Q10(result_56, result_789)
-    result_43 = Q10(img_list[4], img_list[3])
-    result_21 = Q10(img_list[2], img_list[1])
-    result_210 = Q10(result_21, img_list[0])
-    result_43210 = Q10(result_43, result_210)
+    result_87 = Q10(img_list[8], img_list[7])
+    result_89 = Q10(img_list[8], img_list[9])
+    result_789 = Q10(result_87, result_89)
+    result_67 = Q10(img_list[6], img_list[7])
+    result_567 = Q10(result_56, result_67)
+    result_56789 = Q10(result_567, result_789)
+    result_43 = Q10(img_list[4], img_list[3], inv=True)
+    result_32 = Q10(img_list[3], img_list[2], inv=True)
+    result_21 = Q10(img_list[2], img_list[1], inv=True)
+    result_10 = Q10(img_list[1], img_list[0], inv=True)
+    result_210 = Q10(result_21, result_10, inv=True)
+    result_432 = Q10(result_43, result_32, inv=True)
+    result_43210 = Q10(result_432, result_210, inv=True)
     final_result = Q10(result_43210, result_56789)
+    cv.imwrite("Q10_final.png", final_result)
