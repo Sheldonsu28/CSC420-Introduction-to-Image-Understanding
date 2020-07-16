@@ -7,9 +7,9 @@ from matplotlib import pyplot as plt
 from Assignment3 import A2Q7 as q7
 from scipy.io import loadmat
 
-# Code for Q1
-def Q1(imgName, threshlod,kernel=3):
 
+# Code for Q1
+def Q1(imgName, threshlod, kernel=3):
     preprocssing = q7.local_max(imgName, threshlod, kernel)
     Gaussain = preprocssing[1]
     position_vectors = preprocssing[2]
@@ -34,7 +34,7 @@ def Q1(imgName, threshlod,kernel=3):
             x_coordinate = np.clip([v[1] - 8, v[1] + 8], 0, img_shape[1] - 1)
             gradient_magnitude = magnitude[v[-1]][y_coordinate[0]:y_coordinate[1], x_coordinate[0]:x_coordinate[1]]
             orientations = orientation[v[-1]][y_coordinate[0]:y_coordinate[1], x_coordinate[0]:x_coordinate[1]]
-            weighted_magnitude = gradient_magnitude*kernel
+            weighted_magnitude = gradient_magnitude * kernel
             return_value.append([orientations, weighted_magnitude, v])
             selected_vectors.append(v)
 
@@ -51,24 +51,27 @@ def Q1(imgName, threshlod,kernel=3):
     # plt.savefig(imgName[0:-4] + "_orientation.png")
     return return_value, position_vectors
 
+
 def Q2(data):
     values = data[0]
     return_list = []
     for v in values:
-        flatten_orientation = np.ndarray.flatten(v[0]) * 180/np.pi
+        flatten_orientation = np.ndarray.flatten(v[0]) * 180 / np.pi
         flatten_weighted_magnitude = np.ndarray.flatten(v[1])
         location_vector = v[-1]
         counts = np.zeros(36)
         for i in range(0, 36):
-            counts[i] = sum(flatten_weighted_magnitude[(flatten_orientation >= i*10) & (flatten_orientation < 10*(i+1))])
+            counts[i] = sum(
+                flatten_weighted_magnitude[(flatten_orientation >= i * 10) & (flatten_orientation < 10 * (i + 1))])
         peak_index = np.argmax(counts)
         for i in range(0, 36):
-            location_vector.append(counts[int((peak_index+i) % 36)])
+            location_vector.append(counts[int((peak_index + i) % 36)])
         return_list.append(np.array(location_vector))
         # if v is values[0]:
         #     plt.hist(flatten_orientation, bins=np.arange(0, 361, 10))
         #     plt.show()
     return return_list
+
 
 def Q3(image, x0, y0, theta, s):
     img = cv.imread(image)
@@ -76,16 +79,18 @@ def Q3(image, x0, y0, theta, s):
     result = cv.warpAffine(img, rotation_matrix, img.shape[0:2])
     cv.imwrite(image[0:-4] + "_rotated.png", result)
 
+
 def Bhattacharyya_coefficient(vector1, vector2):
-    vector1 = vector1/np.sqrt(np.sum(vector1**2))
-    vector2 = vector2/np.sqrt(np.sum(vector2**2))
+    vector1 = vector1 / np.sqrt(np.sum(vector1 ** 2))
+    vector2 = vector2 / np.sqrt(np.sum(vector2 ** 2))
     BC = np.sum(np.sqrt(vector1 * vector2))
     return BC
+
 
 def Q4(originalImage, rotatedImage, original_vectors, rotated_vectors, rotation_param, window_size):
     orig_image = cv.imread(originalImage)
     rot_image = cv.imread(rotatedImage)
-    output = np.empty((orig_image.shape[0], 2*orig_image.shape[1], orig_image.shape[-1]))
+    output = np.empty((orig_image.shape[0], 2 * orig_image.shape[1], orig_image.shape[-1]))
     output[:orig_image.shape[0], :orig_image.shape[1], :] = orig_image[:, :, :]
     output[:orig_image.shape[0], orig_image.shape[1]:, :] = rot_image[:, :, :]
     rotation_matrix = cv.getRotationMatrix2D(rotation_param[0], rotation_param[1], rotation_param[2])
@@ -109,10 +114,11 @@ def Q4(originalImage, rotatedImage, original_vectors, rotated_vectors, rotation_
         value = m
         src = value[1]
         target = value[0]
-        point1 = (int(shape[1] + src[1]*2**src[-1]), int(src[0]*2**src[-1]))
-        point2 = (int(target[1]*2**target[-1]), int(target[0]*2**target[-1]))
+        point1 = (int(shape[1] + src[1] * 2 ** src[-1]), int(src[0] * 2 ** src[-1]))
+        point2 = (int(target[1] * 2 ** target[-1]), int(target[0] * 2 ** target[-1]))
         cv.line(output, point1, point2, (255, 0, 0))
-    cv.imwrite(rotatedImage[0:-4]+"_match.png", output)
+    cv.imwrite(rotatedImage[0:-4] + "_match.png", output)
+
 
 def Q7():
     sift_features = loadmat('sift_features.mat')
@@ -126,11 +132,11 @@ def Q7():
     # print(len(features_1[:, 0]))
     # print(theta)
 
-def Q8(img1, img2, feature_num, supply1=None, supply2=None, write=False):
-    orig_img1 = cv.imread(img1) if supply1 is None else supply1
-    greyScale1 = cv.cvtColor(orig_img1, cv.COLOR_RGB2GRAY)
-    orig_img2 = cv.imread(img2) if supply2 is None else supply2
-    greyScale2 = cv.cvtColor(orig_img2, cv.COLOR_RGB2GRAY)
+
+def Q8(img1, img2, feature_num, write=False):
+    orig_img1 = cv.imread(img1) if isinstance(img1, str) else img1
+    orig_img2 = cv.imread(img2) if isinstance(img2, str) else img2
+
 
     sift = cv.xfeatures2d.SIFT_create(nfeatures=feature_num)
 
@@ -140,7 +146,7 @@ def Q8(img1, img2, feature_num, supply1=None, supply2=None, write=False):
     orig_img1 = cv.drawKeypoints(orig_img1, kps1, None)
     orig_img2 = cv.drawKeypoints(orig_img2, kps2, None)
     if write == True:
-        cv.imwrite(img1[:-3]+'sift_detect.jpg', orig_img1)
+        cv.imwrite(img1[:-3] + 'sift_detect.jpg', orig_img1)
         cv.imwrite(img2[:-3] + 'sift_detect.jpg', orig_img2)
 
     bf = cv.BFMatcher()
@@ -149,14 +155,16 @@ def Q8(img1, img2, feature_num, supply1=None, supply2=None, write=False):
     r_kps1 = []
     r_kps2 = []
     for m, n in matches:
-        if m.distance < 0.75*n.distance:
+        if m.distance < 0.75 * n.distance:
             r_kps1.append(kps1[m.queryIdx])
             r_kps2.append(kps2[m.trainIdx])
             match_1.append([m])
-    output = cv.drawMatchesKnn(orig_img1, kps1, orig_img2, kps2, match_1, None,
-                               flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-    cv.imwrite("Q8_match.png", output)
+    if write:
+        output = cv.drawMatchesKnn(orig_img1, kps1, orig_img2, kps2, match_1, None,
+                                   flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        cv.imwrite("Q8_match.png", output)
     return r_kps1, r_kps2
+
 
 def RNG(low, high, size):
     r_list = np.empty(size, dtype=int)
@@ -170,34 +178,35 @@ def RNG(low, high, size):
         count += 1
     return r_list
 
+
 def Homographic_matrix_generator():
-    matrix = np.zeros((9, 9))
-    matrix[:, 2] = [-1, 0, -1, 0, -1, 0, -1, 0, 0]
-    matrix[:, 5] = [0, -1, 0, -1, 0, -1, 0, -1, 0]
+    matrix = np.zeros((8, 9))
+    matrix[:, 2] = [1, 0, 1, 0, 1, 0, 1, 0]
+    matrix[:, 5] = [0, 1, 0, 1, 0, 1, 0, 1]
     return matrix
 
-def Homographic_matrix_filler(matrix, kps1, kps2):
 
+def Homographic_matrix_filler(matrix, kps1, kps2):
     x1, x2, x3, x4 = kps1[0, 0], kps1[0, 1], kps1[0, 2], kps1[0, 3]
     y1, y2, y3, y4 = kps1[1, 0], kps1[1, 1], kps1[1, 2], kps1[1, 3]
     xp1, xp2, xp3, xp4 = kps2[0, 0], kps2[0, 1], kps2[0, 2], kps2[0, 3]
     yp1, yp2, yp3, yp4 = kps2[1, 0], kps2[1, 1], kps2[1, 2], kps2[1, 3]
 
-    matrix[:, 0] = [-x1, 0, -x2, 0, -x3, 0, -x4, 0, 0]
-    matrix[:, 1] = [-y1, 0, -y2, 0, -y3, 0, -y4, 0, 0]
+    matrix[:, 0] = [x1, 0, x2, 0, x3, 0, x4, 0]
+    matrix[:, 1] = [y1, 0, y2, 0, y3, 0, y4, 0]
 
-    matrix[:, 3] = [0, -x1, 0, -x2, 0, -x3, 0, -x4, 0]
-    matrix[:, 4] = [0, -y1, 0, -y2, 0, -y3, 0, -y4, 0]
+    matrix[:, 3] = [0, x1, 0, x2, 0, x3, 0, x4]
+    matrix[:, 4] = [0, y1, 0, y2, 0, y3, 0, y4]
 
-    matrix[:, 6] = [x1*xp1, x1*yp1, x2*xp2, x2*yp2, x3*xp3, x3*yp3, x4*xp4, x4*yp4, 0]
-    matrix[:, 7] = [y1 * xp1, y1 * yp1, y2 * xp2, y2 * yp2, y3 * xp3, y3 * yp3, y4 * xp4, y4 * yp4, 0]
-    matrix[:, 8] = [xp1, yp1, xp2, yp2, xp3, yp3, xp4, yp4, 1]
+    matrix[:, 6] = [x1 * -xp1, x1 * -yp1, x2 * -xp2, x2 * -yp2, x3 * -xp3, x3 * -yp3, x4 * -xp4, x4 * -yp4]
+    matrix[:, 7] = [y1 * -xp1, y1 * -yp1, y2 * -xp2, y2 * -yp2, y3 * -xp3, y3 * -yp3, y4 * -xp4, y4 * -yp4]
+    matrix[:, 8] = [-xp1, -yp1, -xp2, -yp2, -xp3, -yp3, -xp4, -yp4]
     return matrix
 
 
-def Q9(img1, img2, kps1, kps2, threshold, limit=1000, supply1=None, supply2=None, write=False):
-    image1 = cv.imread(img1) if supply1 is None else supply1
-    image2 = cv.imread(img2) if supply2 is None else supply2
+def Q9(img1, img2, kps1, kps2, threshold, limit=1000, write=False):
+    image1 = cv.imread(img1) if isinstance(img1, str) else img1
+    image2 = cv.imread(img2) if isinstance(img2, str) else img2
     shape = image1.shape
     kps1_len = len(kps1)
     kps2_len = len(kps2)
@@ -207,7 +216,6 @@ def Q9(img1, img2, kps1, kps2, threshold, limit=1000, supply1=None, supply2=None
     for i in range(kps1_len):
         kps1_coord[:, i] = kps1[i].pt
 
-
     for i in range(kps2_len):
         kps2_coord[:, i] = kps2[i].pt
 
@@ -216,8 +224,6 @@ def Q9(img1, img2, kps1, kps2, threshold, limit=1000, supply1=None, supply2=None
     matched_point = []
     kps1_len = kps1_coord.shape[1]
     matrix = Homographic_matrix_generator()
-    b = np.zeros(9)
-    b[8] = 1
     iteration = 0
     while best < threshold and iteration < limit:
         temp = []
@@ -225,7 +231,8 @@ def Q9(img1, img2, kps1, kps2, threshold, limit=1000, supply1=None, supply2=None
         m1 = kps1_coord[:, random]
         m2 = kps2_coord[:, random]
         A = Homographic_matrix_filler(matrix[:, :], m1, m2)
-        result = spo.lsq_linear(A, b).x.reshape((3, 3))
+        result = np.reshape(np.linalg.svd(A)[2][8], (3, 3))
+        result /= result[2, 2]
         c_vector = np.ones(3)
         count = 0
         for i in range(kps1_len):
@@ -240,9 +247,8 @@ def Q9(img1, img2, kps1, kps2, threshold, limit=1000, supply1=None, supply2=None
             best = count
             matched_point = temp[:]
         iteration += 1
-    print(best, len(matched_point))
     if write:
-        output = np.empty((shape[0], 2*shape[1], shape[2]))
+        output = np.empty((shape[0], 2 * shape[1], shape[2]))
         output[:, :shape[1], :] = image1
         output[:, shape[1]:, :] = image2
 
@@ -251,138 +257,36 @@ def Q9(img1, img2, kps1, kps2, threshold, limit=1000, supply1=None, supply2=None
             point2 = (int(match[1][0]) + shape[1], int(match[1][1]))
             cv.line(output, point1, point2, (255, 0, 0))
         cv.imwrite('Q9_match.png', output)
+    if iteration == threshold:
+        print('Threshold reach, terminating')
     return H
 
-def Q10(img_list):
-    output = cv.imread(img_list[len(img_list)//2])
-    for i in range((len(img_list)//2) + 1, len(img_list)):
 
-        kps1, kps2 = Q8(img_list[i], output, ((len(img_list)//2) - i)*100, supply2=output)
-        H = Q9(img_list[i], output, kps1, kps2, 35, supply2=output)
-        img2 = cv.imread(img_list[i])
-        max_value = []
-        for y in range(img2.shape[0]):
-            last_point = H @ np.array([[img2.shape[1] - 1], [y], [1]])
-            first_point = last_point[0] / last_point[-1]
-            last_point1 = H @ np.array([[0], [y], [1]])
-            first_point1 = last_point1[0] / last_point1[-1]
-            max_value.append(int(first_point))
-            max_value.append(int(first_point1))
+def Q10(img1, img2):
 
-        y_values = []
-        for x in range(img2.shape[1]):
-            max_values = H @ np.array([[x], [0], [1]])
-            min_values = H @ np.array([[x], [img2.shape[0] - 1], [1]])
-            y_values.append(max_values[1]/max_values[-1])
-            y_values.append(min_values[1]/min_values[-1])
+    kps1, kps2 = Q8(img2, img1, 1000)
+    H = Q9(img1, img2, kps1, kps2, 500)
+    img1 = cv.imread(img1) if isinstance(img1, str) else img1
+    img2 = cv.imread(img2) if isinstance(img2, str) else img2
 
-        y_max_value = int(max(y_values))
-        y_min_value = int(min(y_values))
+    max_value = []
+    for y in range(img2.shape[0]):
+        last_point = H @ np.array([[img2.shape[1] - 1], [y], [1]])
+        first_point = last_point[0] / last_point[-1]
+        last_point1 = H @ np.array([[0], [y], [1]])
+        first_point1 = last_point1[0] / last_point1[-1]
+        max_value.append(int(first_point))
+        max_value.append(int(first_point1))
 
-        diff = max([int(y_max_value) - int(y_min_value), int(y_max_value)])
-
-        max_transform = max(max_value) + 1
-        furthest_x = max_transform if max_transform > output.shape[1] else output.shape[1]
-        low = 0 if y_min_value >= 0 else abs(y_min_value)
-        high = output.shape[0] + low
-
-        result = cv.warpPerspective(img2, H, (furthest_x, diff))
-        result[low:high, 0:output.shape[1]] = output
-        output = result
-
-        # a = output.shape
-        # print(temp.shape, a)
-        # temp[low:high, 0:a[1], :] = output
-        # for y in range(img2.shape[0]):
-        #     for x in range(img2.shape[1]):
-        #         transformed_point = H @ np.array([[x],[y],[1]])
-        #         coord = transformed_point[:2]/transformed_point[-1]
-        #         # print(int(coord[1]) - 1 + low)
-        #         temp[int(coord[1]) - 1 + low, int(coord[0]) - 1,:] = img2[y, x, :]
-        # output = temp[:, :, :]
-        cv.imwrite('Q10_stitch.png', output)
+    max_transform = max(max_value) + 1
+    furthest_x = max_transform if max_transform > img1.shape[1] else img1.shape[1]
+    print(furthest_x)
+    result = cv.warpPerspective(img2, H, (img1.shape[1] + img2.shape[1], img1.shape[0]))
+    result[:img1.shape[0], :img1.shape[1]] = img1
+    return result
 
 
-    for r in range(1, (len(img_list)//2) + 1):
-        j = (len(img_list)//2) - r
-        kps1, kps2 = Q8(img_list[j] ,output, 100, supply2=output)
-        H = Q9(img_list[j], output, kps1, kps2, 30, supply2=output)
-        img2 = cv.imread(img_list[j])
-
-        max_value = []
-        for y in range(img2.shape[0]):
-            last_point = H @ np.array([[img2.shape[1] - 1], [y], [1]])
-            first_point = last_point[0] / last_point[-1]
-            last_point1 = H @ np.array([[0], [y], [1]])
-            first_point1 = last_point1[0] / last_point1[-1]
-            max_value.append(int(first_point))
-            max_value.append(int(first_point1))
-
-        cloest_x = abs(min(max_value))
-
-        y_values = []
-        for x in range(img2.shape[1]):
-            max_values = H @ np.array([[x], [0], [1]])
-            min_values = H @ np.array([[x], [img2.shape[0] - 1], [1]])
-            y_values.append(max_values[1] / max_values[-1])
-            y_values.append(min_values[1] / min_values[-1])
-
-        y_max_value = int(max(y_values))
-        y_min_value = int(min(y_values))
-
-        diff = max([int(y_max_value) - int(y_min_value), int(y_max_value)])
-
-        low = 0 if y_min_value >= 0 else abs(y_min_value)
-        high = output.shape[0] + low
-
-        result = cv.warpPerspective(img2, H, (cloest_x+output.shape[1], diff))
-        print(output.shape)
-        result[low:high, cloest_x:output.shape[1] + cloest_x] = output
-        output = result
-
-        # coord = []
-        # for y in range(len(img2.shape[0])):
-        #     first_point = H @ np.array([[img2.shape[1] - 1], [img2.shape[0] - 1], [1]])
-        #     first_point = first_point[1]/first_point[-1]
-        #     coord.append(int(first_point))
-        # min_point = min(coord)
-        #
-        # y_max_values = []
-        # y_min_values = []
-        # for x in range(img2.shape[1]):
-        #     max_values = H @ np.array([[x], [0], [1]])
-        #     min_values = H @ np.array([[x], [img2.shape[0] - 1], [1]])
-        #     y_max_values.append(max_values[1] / max_values[-1])
-        #     y_min_values.append(min_values[1] / min_values[-1])
-        #
-        # y_max_value = max(y_max_values)
-        # y_min_value = min(y_min_values)
-        #
-        # diff = int(y_max_value) - int(y_min_value)
-        #
-        # temp = np.zeros((output.shape[0], output.shape[1] + abs(min_point), 3))
-        # if diff > output.shape[0]:
-        #     temp = np.zeros((diff, output.shape[0] + abs(min_point), 3))
-        # # print(furthest_x)
-        # low = 0 if y_min_value > 0 else abs(y_min_value)
-        # high = output.shape[0] + low
-        #
-        # temp[low:high, abs(min_point):, :] = output
-        #
-        # for y in img2.shape[0]:
-        #     for x in img2.shape[1]:
-        #         transformed_point = H @ np.array([[x],[y],[1]])
-        #         coord = transformed_point[:2]/transformed_point[-1]
-        #         temp[int(coord[1]) - 1 + low, int(coord[0]) - 1] = img2[y, x]
-        # output = temp
-        cv.imwrite('Q10_stitch.png', result)
-        break
-    
-
-
-
-
-if __name__ =="__main__":
+if __name__ == "__main__":
     # # Q1Values = Q1("UofT.jpg", 30, 5)
     # # print(len(Q1Values[0]))
     # # feature_vector_original = Q2(Q1Values)
@@ -400,5 +304,12 @@ if __name__ =="__main__":
                 './my_apartment/image_4.png', './my_apartment/image_5.png', './my_apartment/image_6.png',
                 './my_apartment/image_7.png', './my_apartment/image_8.png', './my_apartment/image_9.png',
                 './my_apartment/image_10.png']
-    Q10(img_list)
-
+    result_56 = Q10(img_list[5], img_list[6])
+    result_78 = Q10(img_list[7], img_list[8])
+    result_789 = Q10(result_78, img_list[9])
+    result_56789 = Q10(result_56, result_789)
+    result_43 = Q10(img_list[4], img_list[3])
+    result_21 = Q10(img_list[2], img_list[1])
+    result_210 = Q10(result_21, img_list[0])
+    result_43210 = Q10(result_43, result_210)
+    final_result = Q10(result_43210, result_56789)
