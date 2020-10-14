@@ -146,7 +146,7 @@ def Laplacian_pyramid(imgName):
     for i in range(0, 6):
         upsample = cv.resize(pyramids[i + 1], (int(pyramids[i + 1].shape[0]) * 2, int(pyramids[i + 1].shape[1]) * 2))
         DoGs.append(pyramids[i] - upsample)
-        normalized_DoGs.append((pyramids[i] - upsample)*255/np.max((pyramids[i] - upsample)))
+        normalized_DoGs.append(cv.normalize(pyramids[i] - upsample, None, 0 ,255))
 
     # Generate composite image
     composite = np.zeros((greyScale.shape[0], greyScale.shape[1] + int(greyScale.shape[1] / 2)), dtype=int)
